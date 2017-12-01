@@ -1,0 +1,109 @@
+apply plugin: 'com.android.application'
+
+
+def releaseTime() {
+    return new Date().format("yyyy-MM-dd", TimeZone.getTimeZone("UTC"))
+}
+
+android {
+    compileSdkVersion 26
+    buildToolsVersion '26.0.2'
+
+    signingConfigs {
+        myConfigs {
+            storeFile file("bm001.keystore")
+            keyAlias "bm001"
+            keyPassword "bm001Mobile"
+            storePassword "bm001Mobile"
+        }
+
+        debug {
+            storeFile file("bm001.keystore")
+            keyAlias "bm001"
+            keyPassword "bm001Mobile"
+            storePassword "bm001Mobile"
+        }
+    }
+
+    defaultConfig {
+        applicationId "com.ycl.gradlepack"
+        minSdkVersion 16
+        targetSdkVersion 26
+        versionCode 1
+        versionName "1.0"
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+
+        //此处定义一个风味的维度，下面productFlavors定义的几个风味，如果使用了同样的维度，才会打出多个风味包
+        //而且左侧的 build variants ，才会出现多个风味的编译选择项
+        //左侧选择的哪个 build variants，就会出现运行的时候就是运行哪个风味的app
+        flavorDimensions "color"
+    }
+
+    productFlavors {
+        prod {
+            applicationId "com.ycl.gradlepackprod"
+            resValue "string", "app_name", "prod_myapp"
+            resValue "bool", "isrRank", 'true'
+            resValue "string", "textview", 'i am prod'
+            buildConfigField "String", "ENVIRONMENT", '"prod"'
+            manifestPlaceholders = [UMENG_CHANNEL_VALUE: "prod",
+                                    app_icon: '@mipmap/ic_launcher']
+
+            dimension "color"
+        }
+
+        dev {
+            // 每个环境包名不同
+            applicationId "com.ycl.gradlepackdev"
+            // 动态添加 string.xml 字段；
+            // 注意，这里是添加，在 string.xml 不能有这个字段，会重名！！！
+            resValue "string", "app_name", "dev_myapp"
+            resValue "bool", "isrRank", 'false'
+            resValue "string", "textview", 'i am dev'
+            // 动态修改 常量 字段
+            buildConfigField "String", "ENVIRONMENT", '"dev"'
+            // 修改 AndroidManifest.xml 里渠道变量
+            manifestPlaceholders = [UMENG_CHANNEL_VALUE: "dev",
+                                    app_icon: '@mipmap/ic_launcher_o']
+
+            dimension "color"
+        }
+    }
+
+
+    buildTypes {
+        release {
+            signingConfig signingConfigs.myConfigs
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+
+            //多渠道打包配置
+            android.applicationVariants.all { variant ->
+                variant.outputs.all { output ->
+                    def outputFile = output.outputFile
+                    if (outputFile != null && outputFile.name.endsWith('.apk')) {
+                        def fileName = outputFile.name.replace("app",
+//                                "${defaultConfig.applicationId}_${defaultConfig.versionName}_${releaseTime()}")
+                                "${variant.productFlavors[0].name}_v${defaultConfig.versionName}_${releaseTime()}")
+                        outputFileName = fileName
+
+                    }
+
+                }
+            }
+
+        }
+        debug {
+            signingConfig signingConfigs.debug
+        }
+    }
+}
+
+dependencies {
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    implementation 'com.android.support:appcompat-v7:26.1.0'
+    implementation 'com.android.support.constraint:constraint-layout:1.0.2'
+    testImplementation 'junit:junit:4.12'
+    androidTestImplementation 'com.android.support.test:runner:1.0.1'
+    androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.1'
+}
